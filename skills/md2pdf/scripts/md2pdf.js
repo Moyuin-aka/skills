@@ -18,17 +18,7 @@ const hljs = require('highlight.js');
 const md = new MarkdownIt({
   html: true,
   linkify: true,
-  typographer: true,
-  highlight: (code, lang) => {
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        const highlighted = hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
-        return `<pre><code class="hljs language-${lang}">${highlighted}</code></pre>`;
-      } catch (_) {}
-    }
-    const auto = hljs.highlightAuto(code).value;
-    return `<pre><code class="hljs language-${lang || 'text'}">${auto}</code></pre>`;
-  }
+  typographer: true
 })
   .use(markdownItKatex, {
     throwOnError: false,
@@ -40,19 +30,30 @@ const md = new MarkdownIt({
     labelAfter: true
   });
 
-// Custom renderer for Mermaid
-md.renderer.rules.fence = function(tokens, idx, options, env, self) {
+// Custom renderer for Mermaid + Syntax Highlighting
+md.renderer.rules.fence = function(tokens, idx) {
   const token = tokens[idx];
   const code = token.content;
-  const lang = token.info.trim();
-  
+  const lang = (token.info || '').trim().split(/\s+/)[0];
+
+  // 1. Mermaid blocks: keep for browser-side mermaid rendering
   if (lang === 'mermaid') {
-    // Keep mermaid code for browser rendering
     return `<div class="mermaid">${code}</div>`;
   }
-  
-  // Default code block rendering with markdown-it highlight.js support
-  return self.renderToken(tokens, idx, options);
+
+  // 2. Code blocks: syntax highlight with highlight.js
+  let highlightedCode;
+  if (lang && hljs.getLanguage(lang)) {
+    try {
+      highlightedCode = hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+    } catch (_) {
+      highlightedCode = md.utils.escapeHtml(code);
+    }
+  } else {
+    highlightedCode = md.utils.escapeHtml(code);
+  }
+
+  return `<pre class="hljs"><code class="language-${lang || 'text'}">${highlightedCode}</code></pre>`;
 };
 
 function escapeHtml(text) {
@@ -64,7 +65,7 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
-function createHtmlDocument(title, bodyContent, katexCssContent) {
+function createHtmlDocument(title, bodyContent, katexCssContent, hljsCssContent) {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -75,6 +76,11 @@ function createHtmlDocument(title, bodyContent, katexCssContent) {
     <!-- KaTeX CSS (inlined with absolute file:// font URLs) -->
     <style>
 ${katexCssContent}
+    </style>
+
+    <!-- Highlight.js CSS theme (inlined, local) -->
+    <style>
+${hljsCssContent}
     </style>
     
     <!-- Mermaid JS (for browser rendering) -->
@@ -334,7 +340,11 @@ async function markdownToPdf(inputPath, outputPath) {
         (_, __, relPath) => `url("file://${katexDistDir}/${relPath}")`
     );
 
-    const fullHtml = createHtmlDocument(title, htmlBody, katexCssPatched);
+    // Highlight.js CSS theme (GitHub style, print-friendly)
+    const hljsCssPath = require.resolve('highlight.js/styles/github.css');
+    const hljsCssContent = fs.readFileSync(hljsCssPath, 'utf-8');
+
+    const fullHtml = createHtmlDocument(title, htmlBody, katexCssPatched, hljsCssContent);
 
     // Write temp HTML so file:// base works consistently
     const tmpHtmlPath = outputPath.replace(/\.pdf$/i, '.tmp.render.html');
