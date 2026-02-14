@@ -1,71 +1,133 @@
 ---
 name: md2pdf-server
-description: Lightweight Markdown to PDF converter for server environments. Renders KaTeX math server-side and Mermaid diagrams via headless browser. No system Chromium installation required—bundles its own headless shell. Use when converting markdown documents with math formulas or diagrams to PDF, especially in Docker containers or VPS without GUI.
+description: Convert Markdown documents to PDF with KaTeX math and Mermaid diagram support. Use when a user wants to (1) Convert markdown files to PDF format, (2) Export documents containing mathematical formulas, (3) Export documents with flowcharts or diagrams, or (4) Generate PDFs in server environments without GUI browsers. Optimized for Docker containers and VPS deployments.
 ---
 
 # md2pdf-server
 
-轻量级 Markdown 转 PDF 工具，专为服务器环境设计。
+Lightweight Markdown-to-PDF converter designed for server environments.
 
-> Server-friendly Markdown to PDF converter with KaTeX SSR and Mermaid browser rendering.
+## When to Use This Skill
 
-## 特点
+- User provides a `.md` file and requests PDF output
+- Document contains KaTeX math expressions (`$...$` or `$$...$$`)
+- Document contains Mermaid diagrams (`mermaid` code blocks)
+- Running in Docker, VPS, or CI/CD without system browser installation
 
-- ✅ **零系统依赖** — 自带 Chromium headless-shell，无需 apt-get 安装
-- ✅ **KaTeX 服务端渲染** — Node.js 端预渲染数学公式，准确快速
-- ✅ **Mermaid 浏览器渲染** — Playwright 动态渲染图表
-- ✅ **Playwright** — 比 Puppeteer 更现代、更稳定
-- ✅ **Docker/VPS 友好** — 专为无 GUI 环境设计
-
-## 架构
-
-```
-Markdown → markdown-it + markdown-it-katex (服务端 KaTeX)
-         → HTML (公式已预渲染)
-         → Playwright + headless-shell → Mermaid 渲染 → PDF
-```
-
-## 安装
+## Quick Start
 
 ```bash
 cd md2pdf-server/scripts
 ./install.sh
+python3 md2pdf.py input.md output.pdf
 ```
 
-或手动：
+## Architecture
+
+```
+Markdown → markdown-it + markdown-it-katex → HTML (math pre-rendered)
+         → Playwright + headless-shell → Mermaid rendered → PDF
+```
+
+- **KaTeX**: Server-side rendered (Node.js) for accuracy and performance
+- **Mermaid**: Browser-rendered via Playwright for complex layout
+- **Zero system dependencies**: Bundles Chromium headless-shell
+
+## Usage from Codex
+
+```python
+import subprocess
+
+result = subprocess.run([
+    'python3', 'skills/md2pdf-server/scripts/md2pdf.py',
+    'input.md', 'output.pdf'
+], capture_output=True, text=True)
+
+if result.returncode == 0:
+    print("PDF generated successfully")
+else:
+    print(f"Error: {result.stderr}")
+```
+
+## Supported Syntax
+
+### KaTeX Math
+
+Inline: `$E = mc^2$`
+
+Block:
+```
+$$
+\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+$$
+```
+
+### Mermaid Diagrams
+
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+```
+
+## Installation
+
+### Automatic
+
+```bash
+cd scripts
+./install.sh
+```
+
+### Manual
+
 ```bash
 npm install
 npx playwright install chromium
 ```
 
-## 使用
+## Troubleshooting
 
+### "Failed to launch browser"
+
+Ensure Playwright Chromium is installed:
 ```bash
-python3 md2pdf.py input.md output.pdf
+npx playwright install chromium
 ```
 
-## 依赖
+### Mermaid not rendering
+
+- Check diagram syntax at https://mermaid.live
+- Converter waits up to 30 seconds for rendering
+- Complex diagrams may need simplified syntax
+
+### KaTeX errors
+
+- Use `$...$` for inline math, `$$...$$` for display math
+- Check supported functions: https://katex.org/docs/supported.html
+
+## Dependencies
 
 - Node.js 18+
-- Playwright (自动下载 Chromium)
-- markdown-it + markdown-it-katex
+- Playwright ^1.40.0
+- markdown-it ^14.0.0
+- markdown-it-katex ^2.0.3
 
-## 支持的语法
+## Output Format
 
-- GitHub Flavored Markdown
-- KaTeX 数学公式 (`$...$` 和 `$$...$$`)
-- Mermaid 图表 (流程图、时序图、甘特图)
-- 代码高亮、表格、任务列表
+- Page size: A4
+- Margins: 2cm top/bottom, 1.5cm left/right
+- Footer: Page numbers (Page X / Y)
+- Background: Print-friendly white
 
-## 为什么不用 Puppeteer？
+## References
 
-Playwright 是微软出品，相比 Puppeteer：
-- 更快的页面加载和渲染
-- 更好的字体渲染质量
-- 更小的 PDF 体积
-- 更活跃的维护
+- [Playwright Docs](https://playwright.dev/)
+- [markdown-it-katex](https://github.com/waylonflinn/markdown-it-katex)
+- [KaTeX Supported Functions](https://katex.org/docs/supported.html)
+- [Mermaid Docs](https://mermaid.js.org/)
 
-## 作者
+## License
 
-Created by **clawmo** 🐾  
-For **Moyuin** | 2026
+MIT - Created by clawmo 🐾
