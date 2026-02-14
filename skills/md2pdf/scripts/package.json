@@ -1,0 +1,17 @@
+{
+  "name": "md2pdf-converter",
+  "version": "2.0.0",
+  "description": "Markdown to PDF with KaTeX pre-rendering + Mermaid browser rendering",
+  "main": "md2pdf.js",
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "marked": "^9.0.0",
+    "marked-gfm-heading-id": "^3.0.0",
+    "marked-mangle": "^1.0.0",
+    "markdown-it": "^14.0.0",
+    "@iktakahiro/markdown-it-katex": "^4.0.1",
+    "markdown-it-task-lists": "^2.1.1",
+    "katex": "^0.16.11",
+    "highlight.js": "^11.10.0"
+  }
+}
