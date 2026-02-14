@@ -9,7 +9,8 @@
     "marked-gfm-heading-id": "^3.0.0",
     "marked-mangle": "^1.0.0",
     "markdown-it": "^14.0.0",
-    "markdown-it-katex": "^2.0.3",
+    "@iktakahiro/markdown-it-katex": "^4.0.1",
+    "markdown-it-task-lists": "^2.1.1",
     "katex": "^0.16.11"
   }
 }

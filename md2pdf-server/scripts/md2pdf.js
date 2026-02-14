@@ -11,16 +11,23 @@ const { chromium } = require('playwright');
 
 // Use markdown-it with KaTeX plugin for server-side math rendering
 const MarkdownIt = require('markdown-it');
-const markdownItKatex = require('markdown-it-katex');
+const markdownItKatex = require('@iktakahiro/markdown-it-katex');
+const markdownItTaskLists = require('markdown-it-task-lists');
 
 const md = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: true
-}).use(markdownItKatex, {
-  throwOnError: false,
-  errorColor: '#cc0000'
-});
+})
+  .use(markdownItKatex, {
+    throwOnError: false,
+    errorColor: '#cc0000'
+  })
+  .use(markdownItTaskLists, {
+    enabled: true,
+    label: true,
+    labelAfter: true
+  });
 
 // Custom renderer for Mermaid
 md.renderer.rules.fence = function(tokens, idx, options, env, self) {
@@ -150,7 +157,7 @@ ${katexCssContent}
         .katex-display {
             margin: 1em 0;
             overflow-x: auto;
-            overflow-y: hidden;
+            overflow-y: visible;
         }
         
         code {
@@ -302,7 +309,13 @@ async function markdownToPdf(inputPath, outputPath) {
     const htmlBody = md.render(markdown);
     
     // Step 2: Build KaTeX CSS with absolute font URLs for reliable headless rendering
-    const katexCssPath = require.resolve('katex/dist/katex.min.css');
+    // Use the KaTeX CSS version that matches the renderer output to avoid markup/CSS mismatch
+    let katexCssPath;
+    try {
+        katexCssPath = require.resolve('@iktakahiro/markdown-it-katex/node_modules/katex/dist/katex.min.css');
+    } catch (_) {
+        katexCssPath = require.resolve('katex/dist/katex.min.css');
+    }
     const katexDistDir = path.dirname(katexCssPath).replace(/\\/g, '/');
     const katexCssRaw = fs.readFileSync(katexCssPath, 'utf-8');
     const katexCssPatched = katexCssRaw.replace(
