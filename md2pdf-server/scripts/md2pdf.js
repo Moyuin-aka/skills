@@ -46,7 +46,7 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
-function createHtmlDocument(title, bodyContent, katexCssHref) {
+function createHtmlDocument(title, bodyContent, katexCssContent) {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -54,8 +54,10 @@ function createHtmlDocument(title, bodyContent, katexCssHref) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${escapeHtml(title)}</title>
     
-    <!-- KaTeX CSS (local, reliable in headless/server environments) -->
-    <link rel="stylesheet" href="${katexCssHref}">
+    <!-- KaTeX CSS (inlined with absolute file:// font URLs) -->
+    <style>
+${katexCssContent}
+    </style>
     
     <!-- Mermaid JS (for browser rendering) -->
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -299,12 +301,18 @@ async function markdownToPdf(inputPath, outputPath) {
     console.log('📝 Rendering Markdown + KaTeX...');
     const htmlBody = md.render(markdown);
     
-    // Step 2: Create full HTML document with local KaTeX CSS
+    // Step 2: Build KaTeX CSS with absolute font URLs for reliable headless rendering
     const katexCssPath = require.resolve('katex/dist/katex.min.css');
-    const katexCssHref = `file://${katexCssPath}`;
-    const fullHtml = createHtmlDocument(title, htmlBody, katexCssHref);
+    const katexDistDir = path.dirname(katexCssPath).replace(/\\/g, '/');
+    const katexCssRaw = fs.readFileSync(katexCssPath, 'utf-8');
+    const katexCssPatched = katexCssRaw.replace(
+        /url\((['"]?)(fonts\/[^'"\)]+)\1\)/g,
+        (_, __, relPath) => `url("file://${katexDistDir}/${relPath}")`
+    );
 
-    // Write temp HTML so local file:// assets (KaTeX fonts) resolve correctly
+    const fullHtml = createHtmlDocument(title, htmlBody, katexCssPatched);
+
+    // Write temp HTML so file:// base works consistently
     const tmpHtmlPath = outputPath.replace(/\.pdf$/i, '.tmp.render.html');
     fs.writeFileSync(tmpHtmlPath, fullHtml, 'utf-8');
 
