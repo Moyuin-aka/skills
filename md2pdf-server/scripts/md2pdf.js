@@ -46,7 +46,7 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
-function createHtmlDocument(title, bodyContent) {
+function createHtmlDocument(title, bodyContent, katexCssHref) {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -54,8 +54,8 @@ function createHtmlDocument(title, bodyContent) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${escapeHtml(title)}</title>
     
-    <!-- KaTeX CSS (for pre-rendered math) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <!-- KaTeX CSS (local, reliable in headless/server environments) -->
+    <link rel="stylesheet" href="${katexCssHref}">
     
     <!-- Mermaid JS (for browser rendering) -->
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -299,9 +299,15 @@ async function markdownToPdf(inputPath, outputPath) {
     console.log('📝 Rendering Markdown + KaTeX...');
     const htmlBody = md.render(markdown);
     
-    // Step 2: Create full HTML document
-    const fullHtml = createHtmlDocument(title, htmlBody);
-    
+    // Step 2: Create full HTML document with local KaTeX CSS
+    const katexCssPath = require.resolve('katex/dist/katex.min.css');
+    const katexCssHref = `file://${katexCssPath}`;
+    const fullHtml = createHtmlDocument(title, htmlBody, katexCssHref);
+
+    // Write temp HTML so local file:// assets (KaTeX fonts) resolve correctly
+    const tmpHtmlPath = outputPath.replace(/\.pdf$/i, '.tmp.render.html');
+    fs.writeFileSync(tmpHtmlPath, fullHtml, 'utf-8');
+
     // Step 3: Launch browser for Mermaid rendering + PDF generation
     console.log('🚀 Launching browser...');
     const browser = await chromium.launch({ headless: true });
@@ -309,10 +315,10 @@ async function markdownToPdf(inputPath, outputPath) {
     try {
         const page = await browser.newPage();
         
-        // Load HTML content directly
-        await page.setContent(fullHtml, { 
+        // Load from file:// to ensure KaTeX CSS + fonts load reliably
+        await page.goto(`file://${tmpHtmlPath}`, {
             waitUntil: 'networkidle',
-            timeout: 30000 
+            timeout: 30000
         });
         
         // Step 4: Wait for Mermaid to render (CRITICAL!)
@@ -367,6 +373,9 @@ async function markdownToPdf(inputPath, outputPath) {
         
     } finally {
         await browser.close();
+        if (typeof tmpHtmlPath !== 'undefined' && fs.existsSync(tmpHtmlPath)) {
+            fs.unlinkSync(tmpHtmlPath);
+        }
     }
 }
 
